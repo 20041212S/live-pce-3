@@ -1,4 +1,6 @@
 import { PrismaClient } from "@prisma/client";
+import { Pool } from "pg";
+import { PrismaPg } from "@prisma/adapter-pg";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -61,17 +63,42 @@ function processDatabaseUrl(): string | undefined {
 
 // Process the database URL before creating PrismaClient
 // This is safe to call even if DATABASE_URL is not set (e.g., during build)
-processDatabaseUrl();
+const processedDatabaseUrl = processDatabaseUrl();
 
 // Prisma Client configuration for serverless environments (Vercel)
 // For Neon, the pooler connection string should work directly with Prisma
-// PrismaClient automatically reads from process.env.DATABASE_URL
-// If DATABASE_URL is not set, PrismaClient will throw an error at runtime (which is expected)
+// We use the pg adapter for proper PostgreSQL connection handling
+function createPrismaClient(): PrismaClient {
+  // Use the processed database URL (which may be undefined during build)
+  const databaseUrl = processedDatabaseUrl || process.env.DATABASE_URL;
+  
+  // Always use adapter - Prisma 7.x requires it when using engine type "client"
+  // During build, we'll use a dummy connection string if DATABASE_URL is not set
+  // This allows the build to complete, but runtime will need the actual DATABASE_URL
+  const connectionString = databaseUrl || "postgresql://dummy:dummy@localhost:5432/dummy?sslmode=disable";
+  
+  try {
+    // Create PostgreSQL connection pool
+    const pool = new Pool({ connectionString: connectionString });
+    const adapter = new PrismaPg(pool);
+    
+    // Create PrismaClient with adapter
+    return new PrismaClient({
+      adapter: adapter,
+      log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
+    });
+  } catch (error) {
+    // Fallback: if adapter creation fails (e.g., during build), create without adapter
+    // This should only happen during build when DATABASE_URL is not available
+    console.warn("Failed to create Prisma adapter, using default client:", error);
+    return new PrismaClient({
+      log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
+    });
+  }
+}
+
 export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
-  });
+  globalForPrisma.prisma ?? createPrismaClient();
 
 // In production (Vercel serverless), we should reuse the client to avoid connection exhaustion
 // Prisma Client is designed to be reused across requests in serverless environments

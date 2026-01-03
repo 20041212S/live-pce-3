@@ -288,31 +288,63 @@ export async function POST(request: NextRequest) {
       const statements = CREATE_TABLES_SQL.split(';').filter(s => s.trim().length > 0);
       
       const results = [];
+      let successCount = 0;
+      
       for (const statement of statements) {
         const trimmed = statement.trim();
         if (trimmed && !trimmed.startsWith('--')) {
           try {
             await prisma.$executeRawUnsafe(trimmed);
-            results.push({ statement: trimmed.substring(0, 50) + '...', success: true });
+            successCount++;
+            results.push({ 
+              statement: trimmed.substring(0, 80).replace(/\s+/g, ' '), 
+              success: true 
+            });
           } catch (err: any) {
-            // Ignore "already exists" errors
-            if (err.message?.includes('already exists') || err.message?.includes('duplicate')) {
-              results.push({ statement: trimmed.substring(0, 50) + '...', success: true, note: 'already exists' });
+            // Ignore "already exists" errors - these are fine
+            const errorMsg = err.message || String(err);
+            if (errorMsg.includes('already exists') || 
+                errorMsg.includes('duplicate') ||
+                errorMsg.includes('relation') && errorMsg.includes('already')) {
+              successCount++;
+              results.push({ 
+                statement: trimmed.substring(0, 80).replace(/\s+/g, ' '), 
+                success: true, 
+                note: 'already exists' 
+              });
             } else {
-              console.warn('Statement warning:', err.message);
-              results.push({ statement: trimmed.substring(0, 50) + '...', success: false, error: err.message });
+              console.warn('Statement error:', errorMsg);
+              results.push({ 
+                statement: trimmed.substring(0, 80).replace(/\s+/g, ' '), 
+                success: false, 
+                error: errorMsg.substring(0, 200) 
+              });
             }
           }
         }
       }
 
-      console.log('✅ Database tables created successfully');
+      // Verify tables were created by checking if client_users table exists
+      let verification = { exists: false, error: null as string | null };
+      try {
+        await prisma.$queryRaw`SELECT 1 FROM client_users LIMIT 1`;
+        verification.exists = true;
+      } catch (err: any) {
+        verification.error = err.message || String(err);
+      }
+
+      console.log('✅ Database setup completed');
+      console.log(`Successfully executed ${successCount} statements`);
 
       return NextResponse.json({
         success: true,
-        message: 'Database tables created successfully',
-        tablesCreated: results.filter(r => r.success).length,
+        message: verification.exists 
+          ? 'Database tables created successfully' 
+          : 'SQL executed but tables may not exist yet',
+        tablesCreated: successCount,
         totalStatements: results.length,
+        verification: verification,
+        details: results.slice(0, 20), // Show first 20 results
       });
     } catch (error: any) {
       console.error('❌ Database setup failed:', error);
@@ -367,4 +399,5 @@ export async function GET(request: NextRequest) {
     }, { status: 500 });
   }
 }
+
 

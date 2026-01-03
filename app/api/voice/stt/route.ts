@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
+export const runtime = "nodejs";
+
 // Lazy-load OpenAI client to avoid initialization during build
 function getOpenAIClient() {
   if (!process.env.OPENAI_API_KEY) {

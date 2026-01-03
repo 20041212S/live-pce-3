@@ -4,11 +4,21 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-// Get the database URL and ensure it's properly formatted for Neon pooler
-function getDatabaseUrl(): string {
+// Process and clean the database URL for Neon pooler compatibility
+// This function processes the DATABASE_URL and sets it back to process.env
+// PrismaClient reads from process.env.DATABASE_URL automatically
+function processDatabaseUrl(): string | undefined {
   const url = process.env.DATABASE_URL;
+  
+  // During build time, DATABASE_URL might not be set - that's okay
+  // It will be available at runtime in Vercel
   if (!url) {
-    throw new Error("DATABASE_URL environment variable is not set");
+    // In development/build, return undefined and let Prisma handle it
+    if (process.env.NODE_ENV === "production" && typeof window === "undefined") {
+      // Only warn in production server-side (not during build)
+      console.warn("DATABASE_URL environment variable is not set");
+    }
+    return undefined;
   }
   
   // For Neon pooler, ensure proper connection string format
@@ -44,15 +54,22 @@ function getDatabaseUrl(): string {
     console.warn('Could not parse DATABASE_URL, using fallback cleanup:', e);
   }
   
+  // Set the processed URL back to process.env so PrismaClient can read it
+  process.env.DATABASE_URL = databaseUrl;
   return databaseUrl;
 }
 
+// Process the database URL before creating PrismaClient
+// This is safe to call even if DATABASE_URL is not set (e.g., during build)
+processDatabaseUrl();
+
 // Prisma Client configuration for serverless environments (Vercel)
 // For Neon, the pooler connection string should work directly with Prisma
+// PrismaClient automatically reads from process.env.DATABASE_URL
+// If DATABASE_URL is not set, PrismaClient will throw an error at runtime (which is expected)
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
-    datasourceUrl: getDatabaseUrl(),
     log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
   });
 

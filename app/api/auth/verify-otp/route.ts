@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { verifyOTP, isOTPExpired } from '@/lib/otpUtils';
 
+export const runtime = "nodejs";
+
 /**
  * POST /api/auth/verify-otp
  * 

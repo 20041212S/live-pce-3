@@ -5,6 +5,8 @@ import { searchKnowledge } from '@/lib/knowledge';
 import { callGroqLLM } from '@/lib/groqLlmService';
 import { detectLanguage } from '@/lib/languageDetection';
 
+export const runtime = "nodejs";
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

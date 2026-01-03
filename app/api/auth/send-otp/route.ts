@@ -3,6 +3,8 @@ import prisma from '@/lib/prisma';
 import { generateOTP, hashOTP, getOTPExpirationTime, canResendOTP } from '@/lib/otpUtils';
 import { sendOTPEmail } from '@/lib/otpEmail';
 
+export const runtime = "nodejs";
+
 /**
  * POST /api/auth/send-otp
  * 

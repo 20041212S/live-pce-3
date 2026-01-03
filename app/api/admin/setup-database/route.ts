@@ -4,6 +4,30 @@ import { prisma } from '@/lib/prisma';
 export const runtime = "nodejs";
 
 /**
+ * SQL statements to drop existing tables (if they have wrong schema)
+ * This ensures we can recreate them with correct column names
+ */
+const DROP_TABLES_SQL = `
+-- Drop tables in reverse dependency order to avoid foreign key errors
+DROP TABLE IF EXISTS "messages" CASCADE;
+DROP TABLE IF EXISTS "audit_logs" CASCADE;
+DROP TABLE IF EXISTS "conversations" CASCADE;
+DROP TABLE IF EXISTS "time_tables" CASCADE;
+DROP TABLE IF EXISTS "exam_time_tables" CASCADE;
+DROP TABLE IF EXISTS "class_timetables" CASCADE;
+DROP TABLE IF EXISTS "exam_timetables" CASCADE;
+DROP TABLE IF EXISTS "email_otps" CASCADE;
+DROP TABLE IF EXISTS "client_users" CASCADE;
+DROP TABLE IF EXISTS "academic_pdfs" CASCADE;
+DROP TABLE IF EXISTS "contacts" CASCADE;
+DROP TABLE IF EXISTS "knowledge" CASCADE;
+DROP TABLE IF EXISTS "rooms" CASCADE;
+DROP TABLE IF EXISTS "fees" CASCADE;
+DROP TABLE IF EXISTS "staff" CASCADE;
+DROP TABLE IF EXISTS "users" CASCADE;
+`;
+
+/**
  * SQL statements to create all tables based on Prisma schema
  * This is a programmatic approach that works in serverless environments
  */
@@ -283,6 +307,27 @@ export async function POST(request: NextRequest) {
     console.log('🔄 Starting database schema creation...');
     
     try {
+      // First, drop existing tables to fix any schema mismatches
+      console.log('🗑️ Dropping existing tables (if any)...');
+      const dropStatements = DROP_TABLES_SQL
+        .split(';')
+        .filter(s => s.trim().length > 0 && !s.trim().startsWith('--'));
+      
+      for (const statement of dropStatements) {
+        const trimmed = statement.trim();
+        if (trimmed) {
+          try {
+            await prisma.$executeRawUnsafe(trimmed);
+            console.log(`✅ Dropped: ${trimmed.substring(0, 50)}`);
+          } catch (err: any) {
+            // Ignore errors if tables don't exist
+            if (!err.message?.includes('does not exist')) {
+              console.warn(`⚠️ Drop warning: ${err.message}`);
+            }
+          }
+        }
+      }
+      
       // Execute SQL to create all tables
       // Better approach: Execute the entire SQL block, then verify
       const results: any[] = [];

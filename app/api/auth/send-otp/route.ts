@@ -136,13 +136,26 @@ export async function POST(request: NextRequest) {
       stack: error.stack,
     });
     
-    // Handle database connection errors
-    if (error.message?.includes('DATABASE_URL') || error.message?.includes('database') || error.message?.includes('Failed to initialize database connection')) {
-      console.error('⚠️ Database connection error - check DATABASE_URL environment variable');
+    // Handle database connection errors - be more specific
+    const errorMessage = error.message || '';
+    const isConnectionError = 
+      error.code === 'P1001' || 
+      error.code === 'P1017' ||
+      error.code === 'P1000' ||
+      errorMessage.includes('Failed to initialize database connection') ||
+      (errorMessage.includes('DATABASE_URL') && errorMessage.includes('not set')) ||
+      (errorMessage.includes('connection') && errorMessage.includes('timeout'));
+    
+    if (isConnectionError) {
+      console.error('⚠️ Database connection error:', {
+        code: error.code,
+        message: errorMessage,
+      });
       return NextResponse.json(
         { 
           error: 'Database connection failed. Please contact support.',
-          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+          details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+          code: error.code,
         },
         { status: 503 }
       );
@@ -187,11 +200,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { 
         error: userFriendlyError,
-        details: errorMessage,
+        // Always include error code and message for debugging (even in production)
         code: error.code || 'UNKNOWN',
+        message: errorMessage,
         type: error.name || 'Error',
         // Include stack trace in development
-        ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+        ...(process.env.NODE_ENV === 'development' && { 
+          stack: error.stack,
+          meta: error.meta 
+        })
       },
       { status: 500 }
     );

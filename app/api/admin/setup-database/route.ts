@@ -118,7 +118,7 @@ CREATE TABLE IF NOT EXISTS "client_users" (
   "name" TEXT,
   "mobile" TEXT NOT NULL,
   "email" TEXT NOT NULL,
-  "user_type" TEXT NOT NULL,
+  "userType" TEXT NOT NULL,
   "email_verified" BOOLEAN NOT NULL DEFAULT false,
   "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "client_users_pkey" PRIMARY KEY ("id")
@@ -143,13 +143,13 @@ CREATE TABLE IF NOT EXISTS "time_tables" (
   "program" TEXT NOT NULL,
   "semester" TEXT NOT NULL,
   "section" TEXT,
-  "day_of_week" TEXT NOT NULL,
+  "dayOfWeek" TEXT NOT NULL,
   "period" TEXT NOT NULL,
   "subject" TEXT NOT NULL,
-  "staff_name" TEXT,
+  "staffName" TEXT,
   "room" TEXT,
-  "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updated_at" TIMESTAMP(3) NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
   CONSTRAINT "time_tables_pkey" PRIMARY KEY ("id")
 );
 
@@ -158,45 +158,45 @@ CREATE TABLE IF NOT EXISTS "exam_time_tables" (
   "id" TEXT NOT NULL,
   "program" TEXT NOT NULL,
   "semester" TEXT NOT NULL,
-  "exam_type" TEXT NOT NULL,
-  "exam_date" TIMESTAMP(3) NOT NULL,
+  "examType" TEXT NOT NULL,
+  "examDate" TIMESTAMP(3) NOT NULL,
   "subject" TEXT NOT NULL,
-  "subject_code" TEXT,
+  "subjectCode" TEXT,
   "session" TEXT,
   "room" TEXT,
-  "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updated_at" TIMESTAMP(3) NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
   CONSTRAINT "exam_time_tables_pkey" PRIMARY KEY ("id")
 );
 
 -- Create class_timetables table
 CREATE TABLE IF NOT EXISTS "class_timetables" (
   "id" TEXT NOT NULL,
-  "program_name" TEXT NOT NULL,
+  "programName" TEXT NOT NULL,
   "semester" TEXT NOT NULL,
-  "day_of_week" TEXT NOT NULL,
+  "dayOfWeek" TEXT NOT NULL,
   "period" TEXT NOT NULL,
   "subject" TEXT NOT NULL,
   "faculty" TEXT,
   "room" TEXT,
-  "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updated_at" TIMESTAMP(3) NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
   CONSTRAINT "class_timetables_pkey" PRIMARY KEY ("id")
 );
 
 -- Create exam_timetables table
 CREATE TABLE IF NOT EXISTS "exam_timetables" (
   "id" TEXT NOT NULL,
-  "program_name" TEXT NOT NULL,
+  "programName" TEXT NOT NULL,
   "semester" TEXT NOT NULL,
-  "exam_name" TEXT NOT NULL,
+  "examName" TEXT NOT NULL,
   "subject" TEXT NOT NULL,
-  "exam_date" TIMESTAMP(3) NOT NULL,
-  "start_time" TEXT NOT NULL,
-  "end_time" TEXT NOT NULL,
+  "examDate" TIMESTAMP(3) NOT NULL,
+  "startTime" TEXT NOT NULL,
+  "endTime" TEXT NOT NULL,
   "room" TEXT,
-  "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updated_at" TIMESTAMP(3) NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
   CONSTRAINT "exam_timetables_pkey" PRIMARY KEY ("id")
 );
 

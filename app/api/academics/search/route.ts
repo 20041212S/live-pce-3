@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 
 // Type helper to extract the type from Prisma query result
-type AcademicPdfType = Awaited<ReturnType<typeof prisma.academicPdf.findMany>>[number];
+// Use Prisma type directly to avoid triggering Prisma client initialization during build
+type AcademicPdfType = Prisma.AcademicPdfGetPayload<{}>;
 
 // GET - Search academic PDFs (student access)
 export async function GET(request: NextRequest) {

@@ -127,9 +127,14 @@ export async function POST(request: NextRequest) {
       where: { email: normalizedEmail },
     });
 
+    // Log whether user exists (for debugging, but don't reveal to client)
+    console.log(`🔍 User lookup for ${normalizedEmail}:`, user ? 'EXISTS' : 'NOT FOUND');
+
     // Don't reveal if user exists or not for security
     if (!user) {
       // Still return success to not reveal if user exists
+      // But log for debugging
+      console.log(`⚠️ User not found for ${normalizedEmail}, returning generic success message`);
       return NextResponse.json({
         success: true,
         message: 'If the email exists, an OTP has been sent to your email address.',
@@ -158,12 +163,19 @@ export async function POST(request: NextRequest) {
         host: process.env.SMTP_HOST || 'smtp.gmail.com',
         port: process.env.SMTP_PORT || '587',
         user: process.env.SMTP_USER ? `${process.env.SMTP_USER.substring(0, 3)}...` : 'NOT SET',
+        pass: process.env.SMTP_PASS ? 'SET' : 'NOT SET',
         from: process.env.SMTP_FROM || process.env.SMTP_USER || 'NOT SET',
       });
+      
+      // Check SMTP config before attempting to send
+      if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+        throw new Error('SMTP credentials not configured. SMTP_USER and SMTP_PASS must be set.');
+      }
       
       await sendOTPEmail(normalizedEmail, otp, 'Password Reset Verification Code - PCE Campus Assistant');
       
       console.log('✅ OTP email sent successfully to:', normalizedEmail);
+      console.log('✅ OTP stored in memory (will expire in 10 minutes)');
     } catch (emailError: any) {
       // Remove OTP from store if email fails
       otpStore.delete(normalizedEmail);

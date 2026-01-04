@@ -72,12 +72,25 @@ export default function AdminLoginPage() {
         // Show detailed error message to help diagnose the issue
         const errorMsg = data.error || 'Failed to send OTP';
         const details = data.details ? `\n\nDetails: ${data.details}` : '';
-        setError(errorMsg + details);
-        console.error('OTP send error:', data);
+        const code = data.code ? `\n\nError Code: ${data.code}` : '';
+        setError(errorMsg + details + code);
+        console.error('❌ OTP send error:', data);
+        
+        // If it's a configuration error, provide helpful guidance
+        if (data.error?.includes('not configured') || data.error?.includes('SMTP')) {
+          setError(
+            errorMsg + 
+            '\n\nTo fix this:\n' +
+            '1. Check that SMTP_USER and SMTP_PASS are set in your environment variables\n' +
+            '2. For Gmail, use an App Password (not your regular password)\n' +
+            '3. Get App Password from: https://myaccount.google.com/apppasswords'
+          );
+        }
         return;
       }
 
       // OTP sent via email - don't show on screen
+      console.log('✅ OTP request successful:', data);
       setSuccess(data.message || 'OTP has been sent to your email address. Please check your inbox.');
       setView('verify-otp');
     } catch (error) {

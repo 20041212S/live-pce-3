@@ -17,7 +17,8 @@
 
     "import:knowledge": "tsx scripts/importKnowledge.ts",
     "import:chatlogs": "tsx scripts/importChatLogsAsKnowledge.ts",
-    "test:otp": "tsx scripts/test-otp-simple.ts"
+    "test:otp": "tsx scripts/test-otp-simple.ts",
+    "check:admin": "node scripts/check-admin.js"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

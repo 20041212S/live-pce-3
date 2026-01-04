@@ -135,11 +135,24 @@ export async function POST(request: NextRequest) {
       // Still return success to not reveal if user exists
       // But log for debugging
       console.log(`⚠️ User not found for ${normalizedEmail}, returning generic success message`);
+      console.log(`💡 TIP: Make sure admin user exists. Run: npm run db:seed or node scripts/createAdmin.js`);
+      
+      // In development, we can be more helpful
+      if (process.env.NODE_ENV === 'development') {
+        // List all admin users for debugging
+        const allUsers = await prisma.user.findMany({
+          select: { email: true, role: true },
+        });
+        console.log('📋 Existing users in database:', allUsers);
+      }
+      
       return NextResponse.json({
         success: true,
         message: 'If the email exists, an OTP has been sent to your email address.',
       });
     }
+    
+    console.log(`✅ Admin user found: ${user.email} (${user.role})`);
 
 
     // Generate secure OTP
@@ -190,13 +203,20 @@ export async function POST(request: NextRequest) {
                            !process.env.SMTP_USER || 
                            !process.env.SMTP_PASS;
       
+      // Return detailed error - this is important for debugging
+      const errorMessage = isConfigError 
+        ? 'Email service is not configured. Please contact the administrator.'
+        : `Failed to send OTP email: ${emailError.message}`;
+      
+      console.error('📧 Email sending failed, returning error to client');
+      
       return NextResponse.json(
         { 
-          error: isConfigError 
-            ? 'Email service is not configured. Please contact the administrator.'
-            : `Failed to send OTP email: ${emailError.message}`,
+          error: errorMessage,
           details: process.env.NODE_ENV === 'development' ? emailError.message : undefined,
-          code: 'EMAIL_SEND_FAILED'
+          code: 'EMAIL_SEND_FAILED',
+          // Include helpful message
+          hint: 'Check server logs for detailed error information. If SMTP is configured correctly, verify the admin user exists in the database.'
         },
         { status: 500 }
       );

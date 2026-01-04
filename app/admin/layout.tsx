@@ -53,7 +53,8 @@ export default function AdminLayout({
     );
   }
 
-  if (pathname === '/admin/login') {
+  // Allow access to login and setup pages without authentication
+  if (pathname === '/admin/login' || pathname === '/admin/setup') {
     return <>{children}</>;
   }
 

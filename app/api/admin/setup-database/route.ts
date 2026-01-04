@@ -303,6 +303,69 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+    
+    // Check if this is a request to create admin user
+    try {
+      const body = await request.json();
+      if (body.action === 'create-admin' || (body.email && body.password)) {
+        const { hashPassword } = await import('@/lib/auth');
+        const { prisma } = await import('@/lib/prisma');
+        
+        const email = body.email?.trim().toLowerCase();
+        const password = body.password;
+        const name = body.name || 'Admin User';
+        
+        if (!email || !password) {
+          return NextResponse.json(
+            { error: 'Email and password are required' },
+            { status: 400 }
+          );
+        }
+        
+        // Check if user exists
+        const existingUser = await prisma.user.findUnique({
+          where: { email },
+        });
+        
+        if (existingUser) {
+          return NextResponse.json(
+            { 
+              error: 'User already exists',
+              email: existingUser.email,
+              role: existingUser.role,
+            },
+            { status: 400 }
+          );
+        }
+        
+        // Create admin user
+        const passwordHash = await hashPassword(password);
+        const admin = await prisma.user.create({
+          data: {
+            name,
+            email,
+            passwordHash,
+            role: 'admin',
+          },
+        });
+        
+        console.log('✅ Admin user created via setup-database route:', admin.email);
+        
+        return NextResponse.json({
+          success: true,
+          message: 'Admin user created successfully',
+          user: {
+            id: admin.id,
+            email: admin.email,
+            name: admin.name,
+            role: admin.role,
+          },
+        });
+      }
+    } catch (parseError) {
+      // If JSON parsing fails or no action specified, continue with database setup
+      // This allows the endpoint to work for both purposes
+    }
 
     console.log('🔄 Starting database schema creation...');
     

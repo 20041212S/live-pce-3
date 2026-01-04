@@ -51,17 +51,37 @@ function processDatabaseUrl(): string | undefined {
 
 // Helper function to create a dummy adapter for build-time safety
 function createDummyAdapter(): PrismaPg {
-  // Create a minimal pool that won't attempt connections during build
-  const dummyPool = new Pool({
-    connectionString: "postgresql://dummy:dummy@localhost:5432/dummy",
-    max: 1,
-  });
-  return new PrismaPg(dummyPool);
+  try {
+    // Create a minimal pool that won't attempt connections during build
+    const dummyPool = new Pool({
+      connectionString: "postgresql://dummy:dummy@localhost:5432/dummy",
+      max: 1,
+      // Prevent actual connection attempts during build
+      connectionTimeoutMillis: 1,
+    });
+    return new PrismaPg(dummyPool);
+  } catch (error) {
+    // If Pool creation fails, try with absolute minimal config
+    console.warn("⚠️ Failed to create pool for dummy adapter, retrying with minimal config");
+    try {
+      const minimalPool = new Pool({
+        connectionString: "postgresql://dummy:dummy@localhost:5432/dummy",
+      });
+      return new PrismaPg(minimalPool);
+    } catch (retryError) {
+      // Last resort: create pool without any options
+      console.error("❌ Critical: Failed to create dummy adapter pool");
+      throw new Error("Unable to create Prisma adapter. This should not happen.");
+    }
+  }
 }
 
 // Prisma Client configuration for serverless environments (Vercel)
 // For Neon, we use the pg adapter as required by Prisma 7.x
 function createPrismaClient(): PrismaClient {
+  // Always ensure we have an adapter - this is required by Prisma 7.x
+  let adapter: PrismaPg;
+  
   // Process and clean the database URL
   const processedUrl = processDatabaseUrl();
   const databaseUrl = processedUrl || process.env.DATABASE_URL;
@@ -71,9 +91,9 @@ function createPrismaClient(): PrismaClient {
     console.error("❌ DATABASE_URL is not set. Database operations will fail.");
     // Prisma 7.x requires an adapter, so we create a dummy pool with invalid connection
     // This allows the build to succeed, but database operations will fail at runtime
-    const dummyAdapter = createDummyAdapter();
+    adapter = createDummyAdapter();
     return new PrismaClient({
-      adapter: dummyAdapter,
+      adapter: adapter,
       log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
     });
   }
@@ -81,9 +101,9 @@ function createPrismaClient(): PrismaClient {
   if (databaseUrl.includes("dummy:dummy")) {
     console.error("❌ DATABASE_URL appears to be a dummy value.");
     // Still provide an adapter to satisfy Prisma 7.x requirements
-    const dummyAdapter = createDummyAdapter();
+    adapter = createDummyAdapter();
     return new PrismaClient({
-      adapter: dummyAdapter,
+      adapter: adapter,
       log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
     });
   }
@@ -99,7 +119,7 @@ function createPrismaClient(): PrismaClient {
     });
     
     // Create Prisma adapter with the pool
-    const adapter = new PrismaPg(pool);
+    adapter = new PrismaPg(pool);
     
     // Create PrismaClient with adapter (required for Prisma 7.x)
     const client = new PrismaClient({
@@ -121,26 +141,47 @@ function createPrismaClient(): PrismaClient {
     // Fallback: create with dummy adapter to satisfy Prisma 7.x requirements
     // This allows the build to succeed, but database operations will fail at runtime
     console.warn("⚠️ Attempting fallback: PrismaClient with dummy adapter");
-    const fallbackAdapter = createDummyAdapter();
+    adapter = createDummyAdapter();
     return new PrismaClient({
-      adapter: fallbackAdapter,
+      adapter: adapter,
       log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
     });
   }
 }
 
 // Safely create Prisma client with error handling for build-time safety
+// IMPORTANT: Always ensure adapter is provided - Prisma 7.x requires it
 let prisma: PrismaClient;
 try {
-  prisma = globalForPrisma.prisma ?? createPrismaClient();
+  if (globalForPrisma.prisma) {
+    prisma = globalForPrisma.prisma;
+  } else {
+    // Create new client with adapter
+    prisma = createPrismaClient();
+    // Verify adapter was set (defensive check)
+    if (!prisma) {
+      throw new Error("PrismaClient creation returned undefined");
+    }
+  }
 } catch (error: any) {
   console.error("❌ Critical error creating Prisma client, using fallback:", error);
-  // Ultimate fallback: create with dummy adapter
-  const fallbackAdapter = createDummyAdapter();
-  prisma = new PrismaClient({
-    adapter: fallbackAdapter,
-    log: ["error"],
-  });
+  // Ultimate fallback: create with dummy adapter - MUST have adapter
+  try {
+    const fallbackAdapter = createDummyAdapter();
+    prisma = new PrismaClient({
+      adapter: fallbackAdapter,
+      log: ["error"],
+    });
+  } catch (fallbackError: any) {
+    console.error("❌ Even fallback failed:", fallbackError);
+    // Last resort: try creating with minimal adapter
+    const lastResortPool = new Pool({ connectionString: "postgresql://dummy:dummy@localhost:5432/dummy" });
+    const lastResortAdapter = new PrismaPg(lastResortPool);
+    prisma = new PrismaClient({
+      adapter: lastResortAdapter,
+      log: ["error"],
+    });
+  }
 }
 
 export { prisma };

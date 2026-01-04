@@ -6,6 +6,10 @@ import { Prisma } from '@prisma/client';
 // Use Prisma type directly to avoid triggering Prisma client initialization during build
 type AcademicPdfType = Prisma.AcademicPdfGetPayload<{}>;
 
+// Mark route as dynamic to prevent static analysis during build
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 // GET - Search academic PDFs (student access)
 export async function GET(request: NextRequest) {
   try {

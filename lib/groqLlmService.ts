@@ -438,6 +438,26 @@ INSTRUCTIONS - ANSWER DIRECTLY AND CONCISELY:
     };
   } catch (error: any) {
     console.error('Groq LLM error:', error);
+    
+    // Handle specific error types
+    if (error?.status === 401 || error?.error?.code === 'invalid_api_key' || error?.code === 'invalid_api_key') {
+      console.error('❌ Invalid Groq API key. Please check GROQ_API_KEY environment variable.');
+      return {
+        answer: 'The AI service is not properly configured. Please contact the administration office to resolve this issue.',
+        sources: Array.isArray(data?.sources) ? data.sources : [],
+      };
+    }
+    
+    // Handle rate limiting
+    if (error?.status === 429 || error?.error?.code === 'rate_limit_exceeded') {
+      console.error('⚠️ Groq API rate limit exceeded');
+      return {
+        answer: 'The service is currently experiencing high demand. Please try again in a moment.',
+        sources: Array.isArray(data?.sources) ? data.sources : [],
+      };
+    }
+    
+    // Generic error handling
     const friendly =
       error?.error?.message ||
       error?.message ||

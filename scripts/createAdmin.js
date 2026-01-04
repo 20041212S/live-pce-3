@@ -1,25 +1,35 @@
 const { PrismaClient } = require('@prisma/client');
+const { Pool } = require('pg');
+const { PrismaPg } = require('@prisma/adapter-pg');
 const { PrismaBetterSqlite3 } = require('@prisma/adapter-better-sqlite3');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 
-// Support SQLite via adapter (matches app runtime)
+// Support both PostgreSQL (Vercel) and SQLite (local dev)
 function buildPrismaClient() {
-  const rawUrl = process.env.DATABASE_URL || 'file:./prisma/dev.db';
-  const cleaned = String(rawUrl).trim().replace(/^["']|["']$/g, '');
-
-  let dbPath = cleaned.replace(/^file:/i, '').replace(/^\/+/, '');
-  if (dbPath.startsWith('./')) {
-    dbPath = dbPath.slice(2);
+  const databaseUrl = process.env.DATABASE_URL;
+  
+  if (!databaseUrl) {
+    console.error('❌ DATABASE_URL is not set');
+    process.exit(1);
   }
-  const absolutePath = path.resolve(process.cwd(), dbPath || 'prisma/dev.db');
-
-  const adapter = new PrismaBetterSqlite3({ url: absolutePath });
-
-  return new PrismaClient({
-    adapter,
-    log: ['error', 'warn'],
-  });
+  
+  if (databaseUrl.startsWith('file:')) {
+    // SQLite for local development
+    const cleaned = String(databaseUrl).trim().replace(/^["']|["']$/g, '');
+    let dbPath = cleaned.replace(/^file:/i, '').replace(/^\/+/, '');
+    if (dbPath.startsWith('./')) {
+      dbPath = dbPath.slice(2);
+    }
+    const absolutePath = path.resolve(process.cwd(), dbPath || 'prisma/dev.db');
+    const adapter = new PrismaBetterSqlite3({ url: absolutePath });
+    return new PrismaClient({ adapter, log: ['error', 'warn'] });
+  } else {
+    // PostgreSQL for Vercel/production
+    const pool = new Pool({ connectionString: databaseUrl });
+    const adapter = new PrismaPg(pool);
+    return new PrismaClient({ adapter, log: ['error', 'warn'] });
+  }
 }
 
 const prisma = buildPrismaClient();

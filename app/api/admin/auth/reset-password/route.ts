@@ -71,14 +71,14 @@ export async function POST(request: NextRequest) {
     // OTP verified and valid - remove it after successful password reset
     otpStore.delete(normalizedEmail);
 
-    // Find user
+    // Find user (now check if user exists - this is where we validate)
     const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
+      where: { email: normalizedEmail },
     });
 
     if (!user) {
       return NextResponse.json(
-        { error: 'User not found' },
+        { error: 'User not found. Please contact the administrator.' },
         { status: 404 }
       );
     }

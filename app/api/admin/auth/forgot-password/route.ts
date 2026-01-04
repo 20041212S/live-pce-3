@@ -122,45 +122,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user exists
+    // Check if user exists (for logging, but don't block OTP sending)
     const user = await prisma.user.findUnique({
       where: { email: normalizedEmail },
     });
 
-    // Log whether user exists (for debugging, but don't reveal to client)
+    // Log whether user exists (for debugging)
     console.log(`🔍 User lookup for ${normalizedEmail}:`, user ? 'EXISTS' : 'NOT FOUND');
-
-    // Don't reveal if user exists or not for security
-    if (!user) {
-      // Still return success to not reveal if user exists
-      // But log for debugging
-      console.log(`⚠️ User not found for ${normalizedEmail}, returning generic success message`);
-      console.log(`💡 TIP: Make sure admin user exists. Run: npm run db:seed or node scripts/createAdmin.js`);
-      
-      // In development, we can be more helpful
-      if (process.env.NODE_ENV === 'development') {
-        // List all admin users for debugging
-        const allUsers = await prisma.user.findMany({
-          select: { email: true, role: true },
-        });
-        console.log('📋 Existing users in database:', allUsers);
-      }
-      
-      return NextResponse.json({
-        success: true,
-        message: 'If the email exists, an OTP has been sent to your email address.',
-      });
-    }
     
-    console.log(`✅ Admin user found: ${user.email} (${user.role})`);
-
+    if (user) {
+      console.log(`✅ Admin user found: ${user.email} (${user.role})`);
+    } else {
+      console.log(`⚠️ User not found for ${normalizedEmail}, but will still send OTP for security`);
+    }
 
     // Generate secure OTP
     const otp = generateOTP();
     const expiresAt = Date.now() + OTP_EXPIRY_TIME;
     const createdAt = Date.now();
 
-    // Store OTP with metadata for security
+    // Store OTP with metadata for security (in memory for now, but will be verified against user in reset step)
     otpStore.set(normalizedEmail, {
       otp,
       expiresAt,
@@ -169,7 +150,7 @@ export async function POST(request: NextRequest) {
       createdAt,
     });
 
-    // Send OTP via email immediately (optimized for speed)
+    // Send OTP via email immediately (just like student portal - always send)
     try {
       console.log('📧 Attempting to send OTP email to:', normalizedEmail);
       console.log('📧 SMTP Configuration:', {
@@ -197,35 +178,20 @@ export async function POST(request: NextRequest) {
       console.error('   Error stack:', emailError.stack);
       console.error('   Full error:', JSON.stringify(emailError, null, 2));
       
-      // Check if it's an SMTP configuration issue
-      const isConfigError = emailError.message.includes('not configured') || 
-                           emailError.message.includes('SMTP') ||
-                           !process.env.SMTP_USER || 
-                           !process.env.SMTP_PASS;
-      
-      // Return detailed error - this is important for debugging
-      const errorMessage = isConfigError 
-        ? 'Email service is not configured. Please contact the administrator.'
-        : `Failed to send OTP email: ${emailError.message}`;
-      
-      console.error('📧 Email sending failed, returning error to client');
-      
+      // Return error - same as student portal
       return NextResponse.json(
         { 
-          error: errorMessage,
+          error: `Failed to send OTP email: ${emailError.message}`,
           details: process.env.NODE_ENV === 'development' ? emailError.message : undefined,
-          code: 'EMAIL_SEND_FAILED',
-          // Include helpful message
-          hint: 'Check server logs for detailed error information. If SMTP is configured correctly, verify the admin user exists in the database.'
         },
         { status: 500 }
       );
     }
 
-    // Success - OTP sent via email
+    // Success - OTP sent via email (same response as student portal)
     return NextResponse.json({
       success: true,
-      message: 'OTP has been sent to your email address. Please check your inbox.',
+      message: 'OTP sent successfully to your email',
     });
   } catch (error: any) {
     console.error('❌ Forgot password error:', error);

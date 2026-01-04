@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 
+export const runtime = "nodejs";
+
 // GET - Get dashboard statistics
 export async function GET(request: NextRequest) {
   try {
@@ -128,10 +130,18 @@ export async function GET(request: NextRequest) {
       recentLogins,
       recentConversations,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Dashboard stats error:', error);
+    console.error('Error details:', {
+      message: error?.message,
+      stack: error?.stack,
+      code: error?.code,
+    });
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: error?.message || 'Internal server error',
+        details: process.env.NODE_ENV === 'development' ? error?.stack : undefined,
+      },
       { status: 500 }
     );
   }

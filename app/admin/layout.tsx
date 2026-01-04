@@ -11,6 +11,7 @@ export default function AdminLayout({
 }) {
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -77,10 +78,23 @@ export default function AdminLayout({
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-blue-400/10 via-purple-400/10 to-pink-400/10 rounded-full blur-3xl"></div>
       </div>
 
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar - Glassmorphic */}
-      <aside className="w-72 glass-card border-r flex flex-col relative z-10" style={{ background: 'rgba(255, 255, 255, 0.25)', backdropFilter: 'blur(20px)', borderColor: 'rgba(255, 255, 255, 0.18)' }}>
-        <div className="p-6 border-b" style={{ borderColor: 'rgba(255, 255, 255, 0.18)' }}>
-          <div className="flex items-center gap-3 mb-2">
+      <aside 
+        className={`fixed lg:static inset-y-0 left-0 w-72 glass-card border-r flex flex-col relative z-50 lg:z-10 transform transition-transform duration-300 ease-in-out ${
+          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}
+        style={{ background: 'rgba(255, 255, 255, 0.25)', backdropFilter: 'blur(20px)', borderColor: 'rgba(255, 255, 255, 0.18)' }}
+      >
+        <div className="p-6 border-b flex items-center justify-between" style={{ borderColor: 'rgba(255, 255, 255, 0.18)' }}>
+          <div className="flex items-center gap-3 mb-2 flex-1">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl relative overflow-hidden animate-float" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', boxShadow: '0 8px 30px rgba(102, 126, 234, 0.4)' }}>
               <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
               <span className="material-symbols-outlined text-white text-2xl relative z-10">admin_panel_settings</span>
@@ -92,6 +106,13 @@ export default function AdminLayout({
               <p className="text-xs text-gray-600 font-medium">PCE Campus Assistant</p>
             </div>
           </div>
+          <button
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="lg:hidden p-2 rounded-lg hover:bg-white/20 transition-colors"
+            aria-label="Close menu"
+          >
+            <span className="material-symbols-outlined text-charcoal text-2xl">close</span>
+          </button>
         </div>
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           {navItems.map((item) => (
@@ -182,6 +203,20 @@ export default function AdminLayout({
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto relative z-10">
+        {/* Mobile Header with Menu Button */}
+        <div className="lg:hidden sticky top-0 z-30 glass-card border-b p-4 flex items-center justify-between" style={{ background: 'rgba(255, 255, 255, 0.3)', backdropFilter: 'blur(20px)', borderColor: 'rgba(255, 255, 255, 0.18)' }}>
+          <button
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="p-2 rounded-lg hover:bg-white/20 transition-colors"
+            aria-label="Open menu"
+          >
+            <span className="material-symbols-outlined text-charcoal text-2xl">menu</span>
+          </button>
+          <h1 className="text-lg font-bold gradient-text" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            Admin Portal
+          </h1>
+          <div className="w-10" /> {/* Spacer for centering */}
+        </div>
         {children}
       </main>
     </div>

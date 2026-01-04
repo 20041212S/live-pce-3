@@ -86,6 +86,7 @@ export default function ChatPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [clientUser, setClientUser] = useState<{ email: string; userType: string } | null>(null);
   const [currentView, setCurrentView] = useState<'chat' | 'academics' | 'timetable' | 'fees' | 'campus' | 'contacts'>('chat');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -1553,15 +1554,37 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-screen w-full relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)' }}>
+      {/* Mobile Menu Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Left Sidebar - Conversations - Glassmorphic */}
-      <aside className="hidden lg:flex w-[320px] flex-col glass-card border-r" style={{ background: 'rgba(255, 255, 255, 0.25)', backdropFilter: 'blur(20px)', borderColor: 'rgba(255, 255, 255, 0.18)' }}>
+      <aside 
+        className={`fixed lg:static inset-y-0 left-0 w-[320px] flex-col glass-card border-r z-50 lg:z-10 transform transition-transform duration-300 ease-in-out ${
+          isSidebarOpen ? 'translate-x-0 flex' : '-translate-x-full lg:translate-x-0 lg:flex'
+        }`}
+        style={{ background: 'rgba(255, 255, 255, 0.25)', backdropFilter: 'blur(20px)', borderColor: 'rgba(255, 255, 255, 0.18)' }}
+      >
         <div className="shrink-0 p-4">
-          <div className="flex items-center gap-3 px-2 pt-2 pb-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl relative overflow-hidden animate-float" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', boxShadow: '0 8px 30px rgba(102, 126, 234, 0.4)' }}>
-              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
-              <p className="text-xl font-bold text-white relative z-10">PCE</p>
+          <div className="flex items-center justify-between px-2 pt-2 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl relative overflow-hidden animate-float" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', boxShadow: '0 8px 30px rgba(102, 126, 234, 0.4)' }}>
+                <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
+                <p className="text-xl font-bold text-white relative z-10">PCE</p>
+              </div>
+              <p className="text-charcoal text-lg font-bold gradient-text" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>PCE Assistant</p>
             </div>
-            <p className="text-charcoal text-lg font-bold gradient-text" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>PCE Assistant</p>
+            <button
+              onClick={() => setIsSidebarOpen(false)}
+              className="lg:hidden p-2 rounded-lg hover:bg-white/20 transition-colors"
+              aria-label="Close menu"
+            >
+              <span className="material-symbols-outlined text-charcoal text-2xl">close</span>
+            </button>
           </div>
           <div className="relative">
             <span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-charcoal/60 z-10">
@@ -1600,7 +1623,10 @@ export default function ChatPage() {
                 filteredConversations.map((conv) => (
                 <li
                   key={conv.id}
-                  onClick={() => setActiveConversation(conv)}
+                  onClick={() => {
+                    setActiveConversation(conv);
+                    setIsSidebarOpen(false); // Close sidebar on mobile when conversation is selected
+                  }}
                   className={`flex h-12 cursor-pointer items-center gap-3 rounded-xl px-3 transition-all hover-lift ${
                     activeConversation?.id === conv.id
                       ? 'neu-card-inset'
@@ -1704,7 +1730,11 @@ export default function ChatPage() {
       {/* Main Chat Area */}
       <div className="flex flex-1 flex-col relative">
         <header className="flex shrink-0 items-center justify-between glass-card p-4" style={{ background: 'rgba(255, 255, 255, 0.3)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255, 255, 255, 0.18)' }}>
-          <button className="flex size-10 items-center justify-center text-charcoal lg:hidden">
+          <button 
+            onClick={() => setIsSidebarOpen(true)}
+            className="flex size-10 items-center justify-center text-charcoal lg:hidden hover:bg-white/20 rounded-lg transition-colors"
+            aria-label="Open menu"
+          >
             <span className="material-symbols-outlined text-2xl">menu</span>
           </button>
           <h1 className="text-charcoal text-lg font-bold leading-tight gradient-text" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>

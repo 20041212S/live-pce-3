@@ -26,10 +26,13 @@ export default function AdminLoginPage() {
     setIsLoading(true);
 
     try {
+      // Normalize email before sending
+      const normalizedEmail = email.trim().toLowerCase();
+      
       const res = await fetch('/api/admin/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: normalizedEmail, password }),
       });
 
       const data = await res.json();
@@ -54,10 +57,13 @@ export default function AdminLoginPage() {
     setIsLoading(true);
 
     try {
+      // Normalize email before sending
+      const normalizedEmail = email.trim().toLowerCase();
+      
       const res = await fetch('/api/admin/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: normalizedEmail }),
       });
 
       const data = await res.json();
@@ -91,10 +97,13 @@ export default function AdminLoginPage() {
     setIsLoading(true);
 
     try {
+      // Normalize email before sending
+      const normalizedEmail = email.trim().toLowerCase();
+      
       const res = await fetch('/api/admin/auth/forgot-password', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), otp: otp.trim() }),
+        body: JSON.stringify({ email: normalizedEmail, otp: otp.trim() }),
       });
 
       const data = await res.json();
@@ -138,11 +147,14 @@ export default function AdminLoginPage() {
     setIsLoading(true);
 
     try {
+      // Normalize email before sending
+      const normalizedEmail = email.trim().toLowerCase();
+      
       const res = await fetch('/api/admin/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          email: email.trim(), 
+          email: normalizedEmail, 
           otp: otp.trim(), 
           newPassword: newPassword.trim() 
         }),
@@ -181,7 +193,7 @@ export default function AdminLoginPage() {
       </div>
 
       {/* Login Card - Glassmorphic */}
-      <div className="relative w-full max-w-md glass-card rounded-3xl shadow-large p-8 animate-slide-up" style={{ background: 'rgba(255, 255, 255, 0.25)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.18)' }}>
+      <div className="relative w-full max-w-md glass-card rounded-3xl shadow-large p-4 sm:p-8 animate-slide-up" style={{ background: 'rgba(255, 255, 255, 0.25)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.18)' }}>
         <div className="mb-6 text-center">
           <div className="mb-4 flex justify-center">
             <div className="flex h-20 w-20 items-center justify-center rounded-2xl relative overflow-hidden animate-float" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', boxShadow: '0 10px 40px rgba(102, 126, 234, 0.4)' }}>

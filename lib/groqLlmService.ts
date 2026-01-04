@@ -8,10 +8,13 @@ export type LlmContext = {
   language?: string; // detected language code (en, ml, hi, ta, etc.)
 };
 
-const groqApiKey = process.env.GROQ_API_KEY;
+const groqApiKey = process.env.GROQ_API_KEY?.trim();
 
 if (!groqApiKey) {
   console.warn('GROQ_API_KEY is not set. LLM responses will not be available.');
+} else {
+  // Log that API key is set (but don't log the actual key for security)
+  console.log('✅ GROQ_API_KEY is configured (length:', groqApiKey.length, 'characters)');
 }
 
 const groq = groqApiKey ? new Groq({ apiKey: groqApiKey }) : null;
@@ -442,6 +445,14 @@ INSTRUCTIONS - ANSWER DIRECTLY AND CONCISELY:
     // Handle specific error types
     if (error?.status === 401 || error?.error?.code === 'invalid_api_key' || error?.code === 'invalid_api_key') {
       console.error('❌ Invalid Groq API key. Please check GROQ_API_KEY environment variable.');
+      console.error('Error details:', {
+        status: error?.status,
+        code: error?.error?.code || error?.code,
+        message: error?.error?.message || error?.message,
+        apiKeyPresent: !!groqApiKey,
+        apiKeyLength: groqApiKey?.length || 0,
+        apiKeyPrefix: groqApiKey ? groqApiKey.substring(0, 10) + '...' : 'not set',
+      });
       return {
         answer: 'The AI service is not properly configured. Please contact the administration office to resolve this issue.',
         sources: Array.isArray(data?.sources) ? data.sources : [],

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { hashPassword } from '@/lib/auth';
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 /**
  * POST /api/admin/create-admin
@@ -14,11 +15,14 @@ export const runtime = "nodejs";
  */
 export async function POST(request: NextRequest) {
   try {
+    console.log('📝 POST /api/admin/create-admin - Creating admin user...');
+    
     // Optional: Add a secret token check for security
     const secretToken = process.env.ADMIN_CREATE_SECRET;
     if (secretToken) {
       const authHeader = request.headers.get('authorization');
       if (authHeader !== `Bearer ${secretToken}`) {
+        console.warn('⚠️ Unauthorized attempt to create admin (missing/invalid token)');
         return NextResponse.json(
           { error: 'Unauthorized. Provide ADMIN_CREATE_SECRET in Authorization header.' },
           { status: 401 }
@@ -29,7 +33,9 @@ export async function POST(request: NextRequest) {
     let body;
     try {
       body = await request.json();
+      console.log('📥 Request body received:', { email: body?.email, hasPassword: !!body?.password });
     } catch (parseError) {
+      console.error('❌ Failed to parse request body:', parseError);
       return NextResponse.json(
         { error: 'Invalid JSON in request body' },
         { status: 400 }
@@ -108,6 +114,8 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔍 GET /api/admin/create-admin - Checking for admin users...');
+    
     const users = await prisma.user.findMany({
       select: {
         email: true,
@@ -122,7 +130,10 @@ export async function GET(request: NextRequest) {
 
     const admins = users.filter(u => u.role === 'admin');
 
+    console.log(`✅ Found ${users.length} total users, ${admins.length} admins`);
+
     return NextResponse.json({
+      success: true,
       totalUsers: users.length,
       adminCount: admins.length,
       admins: admins.map(u => ({
@@ -138,8 +149,17 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('❌ Error checking users:', error);
+    console.error('Error details:', {
+      message: error?.message,
+      stack: error?.stack,
+      code: error?.code,
+    });
     return NextResponse.json(
-      { error: error.message || 'Failed to check users' },
+      { 
+        success: false,
+        error: error.message || 'Failed to check users',
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      },
       { status: 500 }
     );
   }

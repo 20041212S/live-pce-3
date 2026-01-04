@@ -174,7 +174,22 @@ export async function sendOTPEmail(to: string, otp: string, subject?: string): P
   }
 
   try {
+    // Verify SMTP configuration before attempting to send
+    if (!SMTP_USER || !SMTP_PASS) {
+      const errorMsg = 'SMTP credentials not configured. SMTP_USER and SMTP_PASS must be set in environment variables.';
+      console.error('❌', errorMsg);
+      throw new Error(errorMsg);
+    }
+    
     const transporter = getTransporter();
+    
+    // Verify connection before sending (optional but helpful)
+    try {
+      await transporter.verify();
+      console.log('✅ SMTP connection verified');
+    } catch (verifyError: any) {
+      console.warn('⚠️ SMTP verification failed, but attempting to send anyway:', verifyError.message);
+    }
     
     // Send email
     const info = await transporter.sendMail({
@@ -188,9 +203,14 @@ export async function sendOTPEmail(to: string, otp: string, subject?: string): P
     console.log('✅ OTP email sent successfully via SMTP');
     console.log('   To:', normalizedEmail);
     console.log('   Message ID:', info.messageId);
+    console.log('   Subject:', subject || 'Email Verification OTP');
     // DO NOT log OTP for security
   } catch (error: any) {
     console.error('❌ Failed to send OTP email:', error.message);
+    console.error('   SMTP_USER configured:', !!SMTP_USER);
+    console.error('   SMTP_PASS configured:', !!SMTP_PASS);
+    console.error('   SMTP_HOST:', SMTP_HOST);
+    console.error('   SMTP_PORT:', SMTP_PORT);
     
     // Provide helpful error messages for common issues
     let errorMessage = `Failed to send OTP email: ${error.message}`;

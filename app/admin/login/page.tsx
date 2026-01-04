@@ -69,7 +69,11 @@ export default function AdminLoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Failed to send OTP');
+        // Show detailed error message to help diagnose the issue
+        const errorMsg = data.error || 'Failed to send OTP';
+        const details = data.details ? `\n\nDetails: ${data.details}` : '';
+        setError(errorMsg + details);
+        console.error('OTP send error:', data);
         return;
       }
 

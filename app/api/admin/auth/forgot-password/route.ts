@@ -153,18 +153,38 @@ export async function POST(request: NextRequest) {
 
     // Send OTP via email immediately (optimized for speed)
     try {
+      console.log('📧 Attempting to send OTP email to:', normalizedEmail);
+      console.log('📧 SMTP Configuration:', {
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: process.env.SMTP_PORT || '587',
+        user: process.env.SMTP_USER ? `${process.env.SMTP_USER.substring(0, 3)}...` : 'NOT SET',
+        from: process.env.SMTP_FROM || process.env.SMTP_USER || 'NOT SET',
+      });
+      
       await sendOTPEmail(normalizedEmail, otp, 'Password Reset Verification Code - PCE Campus Assistant');
+      
+      console.log('✅ OTP email sent successfully to:', normalizedEmail);
     } catch (emailError: any) {
       // Remove OTP from store if email fails
       otpStore.delete(normalizedEmail);
       console.error('❌ Failed to send OTP email to:', normalizedEmail);
       console.error('   Error:', emailError.message);
       console.error('   Error stack:', emailError.stack);
+      console.error('   Full error:', JSON.stringify(emailError, null, 2));
+      
+      // Check if it's an SMTP configuration issue
+      const isConfigError = emailError.message.includes('not configured') || 
+                           emailError.message.includes('SMTP') ||
+                           !process.env.SMTP_USER || 
+                           !process.env.SMTP_PASS;
       
       return NextResponse.json(
         { 
-          error: 'Failed to send OTP email. Please check your email configuration or try again later.',
-          details: process.env.NODE_ENV === 'development' ? emailError.message : undefined
+          error: isConfigError 
+            ? 'Email service is not configured. Please contact the administrator.'
+            : `Failed to send OTP email: ${emailError.message}`,
+          details: process.env.NODE_ENV === 'development' ? emailError.message : undefined,
+          code: 'EMAIL_SEND_FAILED'
         },
         { status: 500 }
       );
@@ -176,9 +196,17 @@ export async function POST(request: NextRequest) {
       message: 'OTP has been sent to your email address. Please check your inbox.',
     });
   } catch (error: any) {
-    console.error('Forgot password error:', error);
+    console.error('❌ Forgot password error:', error);
+    console.error('   Error message:', error.message);
+    console.error('   Error stack:', error.stack);
+    console.error('   Full error:', JSON.stringify(error, null, 2));
+    
     return NextResponse.json(
-      { error: 'Failed to process request' },
+      { 
+        error: error.message || 'Failed to process request',
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+        code: 'INTERNAL_ERROR'
+      },
       { status: 500 }
     );
   }

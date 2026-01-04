@@ -18,6 +18,9 @@ export default function AdminLoginPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showSetup, setShowSetup] = useState(false);
+  const [setupLoading, setSetupLoading] = useState(false);
+  const [setupResult, setSetupResult] = useState<any>(null);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,6 +50,39 @@ export default function AdminLoginPage() {
       setError('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleCreateAdmin = async () => {
+    setSetupLoading(true);
+    setSetupResult(null);
+    setError('');
+    
+    try {
+      const res = await fetch('/api/admin/setup-database', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create-admin',
+          email: 'chatbot.prc2025@gmail.com',
+          password: 'chat@2025',
+          name: 'Admin User',
+        }),
+      });
+      
+      const data = await res.json();
+      setSetupResult(data);
+      
+      if (data.success) {
+        setSuccess('✅ Admin user created! Email: chatbot.prc2025@gmail.com, Password: chat@2025');
+        setEmail('chatbot.prc2025@gmail.com');
+        setPassword('chat@2025');
+        setShowSetup(false);
+      }
+    } catch (error: any) {
+      setSetupResult({ error: error.message });
+    } finally {
+      setSetupLoading(false);
     }
   };
 
@@ -284,7 +320,7 @@ export default function AdminLoginPage() {
               <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
             </button>
 
-            <div className="text-center">
+            <div className="text-center space-y-2">
               <button
                 type="button"
                 onClick={() => {
@@ -296,6 +332,16 @@ export default function AdminLoginPage() {
               >
                 Forgot Password?
               </button>
+              <div>
+                <button
+                  type="button"
+                  onClick={handleCreateAdmin}
+                  disabled={setupLoading}
+                  className="text-xs text-blue-600 hover:underline font-medium transition-colors disabled:opacity-50"
+                >
+                  {setupLoading ? 'Creating Admin...' : 'Create Admin User (First Time Setup)'}
+                </button>
+              </div>
             </div>
 
             <p className="text-xs text-gray-600 text-center mt-4">

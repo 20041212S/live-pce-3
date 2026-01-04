@@ -427,11 +427,40 @@ export async function POST(request: NextRequest) {
 /**
  * GET /api/admin/setup-database
  * 
- * Check database setup status
+ * Check database setup status and admin users
  */
 export async function GET(request: NextRequest) {
   try {
     const { prisma } = await import('@/lib/prisma');
+    
+    // Check for admin users
+    const users = await prisma.user.findMany({
+      select: {
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    const admins = users.filter(u => u.role === 'admin');
+    
+    return NextResponse.json({
+      success: true,
+      totalUsers: users.length,
+      adminCount: admins.length,
+      admins: admins.map(u => ({
+        email: u.email,
+        name: u.name,
+        createdAt: u.createdAt,
+      })),
+      message: admins.length > 0 
+        ? `Found ${admins.length} admin user(s)`
+        : 'No admin users found. Use POST to create one.',
+    });
     
     // Try to query a table to see if schema exists
     try {
